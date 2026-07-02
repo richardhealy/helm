@@ -2,7 +2,7 @@ import { subscribe } from "@/realtime/listen";
 
 export const dynamic = "force-dynamic";
 
-const CHANNELS = ["vehicle_position", "route_updated"] as const;
+const CHANNELS = ["vehicle_position", "route_updated", "stop_status"] as const;
 
 export async function GET() {
   const encoder = new TextEncoder();

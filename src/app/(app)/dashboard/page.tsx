@@ -1,5 +1,6 @@
 import { listVehicles } from "@/fleet/registry/vehicles";
 import { getActiveRoute } from "@/routing/routes/routes";
+import { listRouteStops } from "@/routing/routes/stops";
 import { FleetMap } from "@/console/map/FleetMap";
 import type { RouteView } from "@/console/map/routes";
 
@@ -17,5 +18,6 @@ export default async function DashboardPage() {
       });
     }
   }
-  return <FleetMap vehicles={vehicles} routes={routes} />;
+  const stops = await listRouteStops();
+  return <FleetMap vehicles={vehicles} routes={routes} stops={stops} />;
 }

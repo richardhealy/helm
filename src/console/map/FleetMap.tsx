@@ -9,6 +9,7 @@ import {
   type VehiclePosition,
 } from "./markers";
 import { routesToGeoJson, type RouteView } from "./routes";
+import { stopsToGeoJson, type StopView } from "./stops";
 import type { VehicleSummary } from "@/fleet/registry/vehicles";
 
 const SOURCE_ID = "vehicles";
@@ -27,9 +28,11 @@ function initialPositions(vehicles: VehicleSummary[]): VehiclePosition[] {
 export function FleetMap({
   vehicles,
   routes,
+  stops,
 }: {
   vehicles: VehicleSummary[];
   routes: RouteView[];
+  stops: StopView[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const positions = useRef<Map<string, VehiclePosition>>(
@@ -37,6 +40,9 @@ export function FleetMap({
   );
   const routeViews = useRef<Map<string, RouteView>>(
     new Map(routes.map((r) => [r.vehicleId, r])),
+  );
+  const stopViews = useRef<Map<string, StopView>>(
+    new Map(stops.map((s) => [s.id, s])),
   );
 
   useEffect(() => {
@@ -59,6 +65,11 @@ export function FleetMap({
     const renderRoutes = () => {
       const src = map.getSource("routes") as mapboxgl.GeoJSONSource | undefined;
       if (src) src.setData(routesToGeoJson([...routeViews.current.values()]));
+    };
+
+    const renderStops = () => {
+      const src = map.getSource("stops") as mapboxgl.GeoJSONSource | undefined;
+      if (src) src.setData(stopsToGeoJson([...stopViews.current.values()]));
     };
 
     map.on("load", () => {
@@ -104,6 +115,28 @@ export function FleetMap({
         },
       });
 
+      map.addSource("stops", {
+        type: "geojson",
+        data: stopsToGeoJson([...stopViews.current.values()]),
+      });
+      map.addLayer({
+        id: "stop-dots",
+        type: "circle",
+        source: "stops",
+        paint: {
+          "circle-radius": 6,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#0f172a",
+          "circle-color": [
+            "match",
+            ["get", "status"],
+            "delivered", "#22c55e",
+            "en_route", "#f59e0b",
+            "#64748b",
+          ],
+        },
+      });
+
       map.addSource(SOURCE_ID, {
         type: "geojson",
         data: toGeoJson([...positions.current.values()]),
@@ -139,6 +172,16 @@ export function FleetMap({
       const { geometry } = (await res.json()) as { geometry: GeoJSON.LineString };
       routeViews.current.set(vehicleId, { vehicleId, geometry });
       renderRoutes();
+    });
+    es.addEventListener("stop_status", (e) => {
+      const { deliveryId, status } = JSON.parse((e as MessageEvent).data) as {
+        deliveryId: string;
+        status: string;
+      };
+      const existing = stopViews.current.get(deliveryId);
+      if (!existing) return;
+      stopViews.current.set(deliveryId, { ...existing, status });
+      renderStops();
     });
 
     return () => {
