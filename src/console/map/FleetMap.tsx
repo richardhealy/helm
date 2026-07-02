@@ -8,6 +8,7 @@ import {
   toGeoJson,
   type VehiclePosition,
 } from "./markers";
+import { routesToGeoJson, type RouteView } from "./routes";
 import type { VehicleSummary } from "@/fleet/registry/vehicles";
 
 const SOURCE_ID = "vehicles";
@@ -23,10 +24,19 @@ function initialPositions(vehicles: VehicleSummary[]): VehiclePosition[] {
     }));
 }
 
-export function FleetMap({ vehicles }: { vehicles: VehicleSummary[] }) {
+export function FleetMap({
+  vehicles,
+  routes,
+}: {
+  vehicles: VehicleSummary[];
+  routes: RouteView[];
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const positions = useRef<Map<string, VehiclePosition>>(
     new Map(initialPositions(vehicles).map((p) => [p.vehicleId, p])),
+  );
+  const routeViews = useRef<Map<string, RouteView>>(
+    new Map(routes.map((r) => [r.vehicleId, r])),
   );
 
   useEffect(() => {
@@ -44,6 +54,11 @@ export function FleetMap({ vehicles }: { vehicles: VehicleSummary[] }) {
     const render = () => {
       const src = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
       if (src) src.setData(toGeoJson([...positions.current.values()]));
+    };
+
+    const renderRoutes = () => {
+      const src = map.getSource("routes") as mapboxgl.GeoJSONSource | undefined;
+      if (src) src.setData(routesToGeoJson([...routeViews.current.values()]));
     };
 
     map.on("load", () => {
@@ -74,6 +89,21 @@ export function FleetMap({ vehicles }: { vehicles: VehicleSummary[] }) {
         });
       }
 
+      map.addSource("routes", {
+        type: "geojson",
+        data: routesToGeoJson([...routeViews.current.values()]),
+      });
+      map.addLayer({
+        id: "route-lines",
+        type: "line",
+        source: "routes",
+        paint: {
+          "line-color": "#38bdf8",
+          "line-width": 3,
+          "line-opacity": 0.7,
+        },
+      });
+
       map.addSource(SOURCE_ID, {
         type: "geojson",
         data: toGeoJson([...positions.current.values()]),
@@ -99,6 +129,16 @@ export function FleetMap({ vehicles }: { vehicles: VehicleSummary[] }) {
       if (!pos) return;
       positions.current.set(pos.vehicleId, pos);
       render();
+    });
+    es.addEventListener("route_updated", async (e) => {
+      const { vehicleId } = JSON.parse((e as MessageEvent).data) as {
+        vehicleId: string;
+      };
+      const res = await fetch(`/api/vehicles/${vehicleId}/route`);
+      if (!res.ok) return;
+      const { geometry } = (await res.json()) as { geometry: GeoJSON.LineString };
+      routeViews.current.set(vehicleId, { vehicleId, geometry });
+      renderRoutes();
     });
 
     return () => {

@@ -2,25 +2,31 @@ import { subscribe } from "@/realtime/listen";
 
 export const dynamic = "force-dynamic";
 
+const CHANNELS = ["vehicle_position", "route_updated"] as const;
+
 export async function GET() {
   const encoder = new TextEncoder();
-  let cleanup: (() => Promise<void>) | null = null;
+  let cleanups: Array<() => Promise<void>> = [];
   let heartbeat: ReturnType<typeof setInterval> | null = null;
 
   const stream = new ReadableStream({
     async start(controller) {
-      cleanup = await subscribe("vehicle_position", (payload) => {
-        controller.enqueue(
-          encoder.encode(`event: vehicle_position\ndata: ${payload}\n\n`),
-        );
-      });
+      cleanups = await Promise.all(
+        CHANNELS.map((channel) =>
+          subscribe(channel, (payload) => {
+            controller.enqueue(
+              encoder.encode(`event: ${channel}\ndata: ${payload}\n\n`),
+            );
+          }),
+        ),
+      );
       heartbeat = setInterval(() => {
         controller.enqueue(encoder.encode(": ping\n\n"));
       }, 15000);
     },
     async cancel() {
       if (heartbeat) clearInterval(heartbeat);
-      if (cleanup) await cleanup();
+      await Promise.all(cleanups.map((c) => c()));
     },
   });
 
