@@ -54,3 +54,17 @@ in London), assigns them to the demo vehicle, and runs Mapbox Optimization v1 â€
 the dashboard then draws the optimized route through the ordered stops.
 Re-running `optimize` after adding/removing stops redraws the route live over
 SSE (`route_updated`).
+
+## Run the simulation
+
+The simulator drives vehicles along their optimized routes, emitting positions
+through the same `PositionPing` ingest contract a real telematics feed would.
+
+```bash
+npx tsx scripts/demo-deliveries.ts   # deliveries + optimized route
+npx tsx scripts/simulator.ts         # glide the vehicle along it
+```
+
+Watch http://localhost:3000/dashboard: the vehicle moves smoothly along the
+route and stops turn green (`delivered`) on arrival. Speed is configurable via
+`SIM_SPEED_MPS`. In production this runs as a persistent Railway worker.
