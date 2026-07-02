@@ -160,11 +160,12 @@ model Route {
   id          String      @id @default(cuid())
   vehicleId   String
   vehicle     Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  status      RouteStatus @default(active)
-  geometry    Json
-  distance    Float
-  duration    Float
-  optimizedAt DateTime    @default(now())
+  status         RouteStatus @default(active)
+  geometry       Json
+  distance       Float
+  duration       Float
+  progressMeters Float       @default(0)
+  optimizedAt    DateTime    @default(now())
   legs        RouteLeg[]
 
   @@index([vehicleId])

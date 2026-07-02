@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Route" ADD COLUMN     "progressMeters" DOUBLE PRECISION NOT NULL DEFAULT 0;
