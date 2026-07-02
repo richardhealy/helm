@@ -28,3 +28,15 @@ npm run dev                       # http://localhost:3000
 - `src/app` — App Router routes
 - `src/lib` — shared server/client utilities (`db`, `env`, `providers`, …)
 - `prisma` — schema and migrations
+
+## Run the live demo
+
+1. `docker compose up -d` — start Postgres
+2. `npm run db:migrate` — apply the schema
+3. Fill `NEXT_PUBLIC_MAPBOX_TOKEN` in `.env.local`
+4. `npm run dev` — start the app
+5. `npx tsx scripts/demo-mover.ts` — drive a simulated vehicle
+6. Open http://localhost:3000/dashboard — watch it move in real time
+
+This proves the liveness chain end to end: `POST /api/ingest` → Postgres
+`NOTIFY` → SSE `/api/stream` → the Mapbox map, with no page refresh.
