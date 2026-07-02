@@ -8,6 +8,16 @@ describe("buildGeocodeUrl", () => {
     expect(url).toContain("q=10%20Downing%20St%2C%20London");
     expect(url).toContain("limit=1");
     expect(url).toContain("access_token=tok123");
+    expect(url).not.toContain("proximity");
+  });
+
+  it("adds proximity (lng,lat) and country bias when given", () => {
+    const url = buildGeocodeUrl("St Paul's", "tok", {
+      proximity: { lat: 51.5, lng: -0.12 },
+      country: "gb",
+    });
+    expect(url).toContain("proximity=-0.12,51.5");
+    expect(url).toContain("country=gb");
   });
 });
 

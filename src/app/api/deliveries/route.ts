@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createDelivery } from "@/deliveries/orders/deliveries";
 
-const body = z.object({ address: z.string().min(1) });
+const body = z.object({
+  address: z.string().min(1),
+  bias: z
+    .object({
+      proximity: z.object({ lat: z.number(), lng: z.number() }).optional(),
+      country: z.string().optional(),
+    })
+    .optional(),
+});
 
 export async function POST(request: Request) {
   const parsed = body.safeParse(await request.json().catch(() => null));

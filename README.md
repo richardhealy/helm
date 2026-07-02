@@ -40,3 +40,17 @@ npm run dev                       # http://localhost:3000
 
 This proves the liveness chain end to end: `POST /api/ingest` → Postgres
 `NOTIFY` → SSE `/api/stream` → the Mapbox map, with no page refresh.
+
+## Run the routing demo
+
+With the app running (`npm run dev`) and Postgres up:
+
+```bash
+npx tsx scripts/demo-deliveries.ts
+```
+
+This geocodes five London addresses (biased to GB so ambiguous names resolve
+in London), assigns them to the demo vehicle, and runs Mapbox Optimization v1 —
+the dashboard then draws the optimized route through the ordered stops.
+Re-running `optimize` after adding/removing stops redraws the route live over
+SSE (`route_updated`).

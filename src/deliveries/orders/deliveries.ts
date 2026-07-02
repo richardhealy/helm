@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { geocodeAddress } from "@/deliveries/geocode/geocode";
+import { geocodeAddress, type GeocodeBias } from "@/deliveries/geocode/geocode";
 
 export type DeliverySummary = {
   id: string;
@@ -35,8 +35,9 @@ function toSummary(d: DeliveryRow): DeliverySummary {
 
 export async function createDelivery(input: {
   address: string;
+  bias?: GeocodeBias;
 }): Promise<DeliverySummary> {
-  const coords = await geocodeAddress(input.address);
+  const coords = await geocodeAddress(input.address, input.bias);
   if (!coords) throw new Error("Could not geocode address");
   const d = await prisma.delivery.create({
     data: { address: input.address, lat: coords.lat, lng: coords.lng },

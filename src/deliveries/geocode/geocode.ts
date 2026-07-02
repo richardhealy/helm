@@ -1,6 +1,26 @@
-export function buildGeocodeUrl(address: string, token: string): string {
+export type Proximity = { lat: number; lng: number };
+
+/**
+ * Bias options for forward geocoding. `country` (ISO 3166-1 alpha-2, e.g. "gb")
+ * is the strong signal — it prevents wrong-country matches like resolving
+ * "St Paul's Cathedral, London" to St. Pauls, North Carolina. `proximity`
+ * refines ranking within that region.
+ */
+export type GeocodeBias = { proximity?: Proximity; country?: string };
+
+export function buildGeocodeUrl(
+  address: string,
+  token: string,
+  bias?: GeocodeBias,
+): string {
   const q = encodeURIComponent(address);
-  return `https://api.mapbox.com/search/geocode/v6/forward?q=${q}&limit=1&access_token=${token}`;
+  const parts = [`q=${q}`, "limit=1"];
+  if (bias?.country) parts.push(`country=${encodeURIComponent(bias.country)}`);
+  if (bias?.proximity) {
+    parts.push(`proximity=${bias.proximity.lng},${bias.proximity.lat}`);
+  }
+  parts.push(`access_token=${token}`);
+  return `https://api.mapbox.com/search/geocode/v6/forward?${parts.join("&")}`;
 }
 
 export function parseGeocode(
@@ -18,10 +38,11 @@ export function parseGeocode(
 
 export async function geocodeAddress(
   address: string,
+  bias?: GeocodeBias,
 ): Promise<{ lat: number; lng: number } | null> {
   const token = process.env.MAPBOX_TOKEN;
   if (!token) throw new Error("MAPBOX_TOKEN is not set");
-  const res = await fetch(buildGeocodeUrl(address, token));
+  const res = await fetch(buildGeocodeUrl(address, token, bias));
   if (!res.ok) return null;
   return parseGeocode(await res.json());
 }
