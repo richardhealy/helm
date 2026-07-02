@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values so the build/typecheck run without real secrets.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_dev?schema=public
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Generate the Prisma client only if this project uses the db module.
+      - name: Prisma generate
+        run: test -f prisma/schema.prisma && npx prisma generate || echo "no prisma schema — skipping"
+
+      - name: Lint
+        run: npx eslint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
