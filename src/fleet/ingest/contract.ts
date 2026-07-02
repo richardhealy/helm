@@ -15,4 +15,6 @@ export const positionPingInput = z.object({
   timestamp: z.coerce.date().optional(),
 });
 
-export type PositionPingInput = z.infer<typeof positionPingInput>;
+// `z.input` (not `z.infer`/`z.output`): `source` has a default, so it is
+// optional for callers; `ingestPing` applies the default when parsing.
+export type PositionPingInput = z.input<typeof positionPingInput>;
