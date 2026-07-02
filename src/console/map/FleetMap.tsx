@@ -1,0 +1,83 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+import {
+  parsePositionEvent,
+  toGeoJson,
+  type VehiclePosition,
+} from "./markers";
+import type { VehicleSummary } from "@/fleet/registry/vehicles";
+
+const SOURCE_ID = "vehicles";
+
+function initialPositions(vehicles: VehicleSummary[]): VehiclePosition[] {
+  return vehicles
+    .filter((v) => v.lat !== null && v.lng !== null)
+    .map((v) => ({
+      vehicleId: v.id,
+      lat: v.lat as number,
+      lng: v.lng as number,
+      heading: v.heading ?? 0,
+    }));
+}
+
+export function FleetMap({ vehicles }: { vehicles: VehicleSummary[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const positions = useRef<Map<string, VehiclePosition>>(
+    new Map(initialPositions(vehicles).map((p) => [p.vehicleId, p])),
+  );
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+
+    const first = [...positions.current.values()][0];
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: "mapbox://styles/mapbox/dark-v11",
+      center: first ? [first.lng, first.lat] : [-0.12, 51.5],
+      zoom: 11,
+    });
+
+    const render = () => {
+      const src = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+      if (src) src.setData(toGeoJson([...positions.current.values()]));
+    };
+
+    map.on("load", () => {
+      map.addSource(SOURCE_ID, {
+        type: "geojson",
+        data: toGeoJson([...positions.current.values()]),
+      });
+      map.addLayer({
+        id: "vehicles-arrows",
+        type: "symbol",
+        source: SOURCE_ID,
+        layout: {
+          "icon-image": "triangle-15",
+          "icon-rotate": ["get", "heading"],
+          "icon-allow-overlap": true,
+          "icon-size": 1.4,
+        },
+      });
+      render();
+    });
+
+    const es = new EventSource("/api/stream");
+    es.addEventListener("vehicle_position", (e) => {
+      const pos = parsePositionEvent((e as MessageEvent).data);
+      if (!pos) return;
+      positions.current.set(pos.vehicleId, pos);
+      render();
+    });
+
+    return () => {
+      es.close();
+      map.remove();
+    };
+  }, []);
+
+  return <div ref={containerRef} className="h-screen w-full" />;
+}
