@@ -47,6 +47,33 @@ export function FleetMap({ vehicles }: { vehicles: VehicleSummary[] }) {
     };
 
     map.on("load", () => {
+      // Register our own arrow icon rather than relying on the style's sprite —
+      // modern Mapbox styles (dark-v11) don't ship the classic Maki icons.
+      if (!map.hasImage("vehicle-arrow")) {
+        const size = 22;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#38bdf8";
+        ctx.strokeStyle = "#0c4a6e";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(size / 2, 2); // nose (points north / heading 0)
+        ctx.lineTo(size - 3, size - 3);
+        ctx.lineTo(size / 2, size - 7); // notch for a chevron look
+        ctx.lineTo(3, size - 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        const image = ctx.getImageData(0, 0, size, size);
+        map.addImage("vehicle-arrow", {
+          width: size,
+          height: size,
+          data: new Uint8Array(image.data.buffer),
+        });
+      }
+
       map.addSource(SOURCE_ID, {
         type: "geojson",
         data: toGeoJson([...positions.current.values()]),
@@ -56,10 +83,11 @@ export function FleetMap({ vehicles }: { vehicles: VehicleSummary[] }) {
         type: "symbol",
         source: SOURCE_ID,
         layout: {
-          "icon-image": "triangle-15",
+          "icon-image": "vehicle-arrow",
           "icon-rotate": ["get", "heading"],
+          "icon-rotation-alignment": "map",
           "icon-allow-overlap": true,
-          "icon-size": 1.4,
+          "icon-size": 1.2,
         },
       });
       render();
