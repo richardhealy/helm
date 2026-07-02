@@ -97,9 +97,11 @@ model Vehicle {
   speed             Float?
   positionUpdatedAt DateTime?
 
-  pings     PositionPing[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  pings      PositionPing[]
+  deliveries Delivery[]
+  routes     Route[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 }
 
 model PositionPing {
@@ -114,4 +116,70 @@ model PositionPing {
   timestamp DateTime       @default(now())
 
   @@index([vehicleId, timestamp])
+}
+
+// ── Deliveries & Routing ─────────────────────────────────────────────────────
+
+enum DeliveryStatus {
+  unassigned
+  assigned
+  en_route
+  delivered
+  failed
+}
+
+enum RouteStatus {
+  draft
+  active
+  completed
+}
+
+model Delivery {
+  id              String         @id @default(cuid())
+  address         String
+  lat             Float
+  lng             Float
+  status          DeliveryStatus @default(unassigned)
+  vehicleId       String?
+  vehicle         Vehicle?       @relation(fields: [vehicleId], references: [id])
+  sequence        Int?
+  serviceDuration Int            @default(0)
+  timeWindowStart DateTime?
+  timeWindowEnd   DateTime?
+  assignedAt      DateTime?
+  completedAt     DateTime?
+  notes           String?
+  legs            RouteLeg[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([vehicleId, sequence])
+}
+
+model Route {
+  id          String      @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  status      RouteStatus @default(active)
+  geometry    Json
+  distance    Float
+  duration    Float
+  optimizedAt DateTime    @default(now())
+  legs        RouteLeg[]
+
+  @@index([vehicleId])
+}
+
+model RouteLeg {
+  id           String    @id @default(cuid())
+  routeId      String
+  route        Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  sequence     Int
+  distance     Float
+  duration     Float
+  eta          DateTime
+  toDeliveryId String?
+  toDelivery   Delivery? @relation(fields: [toDeliveryId], references: [id])
+
+  @@index([routeId, sequence])
 }
