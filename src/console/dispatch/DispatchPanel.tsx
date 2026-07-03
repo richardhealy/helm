@@ -58,6 +58,11 @@ export function DispatchPanel() {
     [refresh],
   );
 
+  const dispatchFleet = useCallback(async () => {
+    await fetch("/api/dispatch/fleet", { method: "POST" });
+    refresh();
+  }, [refresh]);
+
   const assign = useCallback(
     async (deliveryId: string, vehicleId: string) => {
       await fetch(`/api/deliveries/${deliveryId}/assign`, {
@@ -108,7 +113,17 @@ export function DispatchPanel() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <p className={LABEL}>Unassigned · {board?.unassigned.length ?? 0}</p>
+        <div className="flex items-center justify-between">
+          <p className={LABEL}>Unassigned · {board?.unassigned.length ?? 0}</p>
+          {board && board.unassigned.length > 0 && (
+            <button
+              onClick={dispatchFleet}
+              className="rounded bg-[#38bdf8] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#0b1220] hover:bg-[#7dd3fc] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#38bdf8]"
+            >
+              Dispatch fleet
+            </button>
+          )}
+        </div>
         {board && board.unassigned.length === 0 ? (
           <p className="text-xs text-[#475569]">No unassigned deliveries. Add one above.</p>
         ) : (
