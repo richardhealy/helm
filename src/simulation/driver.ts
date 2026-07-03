@@ -110,3 +110,27 @@ export async function tickAll(opts: TickOpts): Promise<void> {
     await tickVehicle(vehicleId, opts);
   }
 }
+
+/**
+ * Demo helper: reset every completed route back to the start (active, progress
+ * 0) and its delivered stops to en_route, so the fleet drives its routes again.
+ * Opt-in (the simulator calls this only when SIM_LOOP is set) — production
+ * fleets do not auto-replay deliveries. Returns the number of routes reset.
+ */
+export async function redispatchCompletedRoutes(): Promise<number> {
+  const completed = await prisma.route.findMany({
+    where: { status: "completed" },
+    select: { id: true, vehicleId: true },
+  });
+  for (const route of completed) {
+    await prisma.route.update({
+      where: { id: route.id },
+      data: { status: "active", progressMeters: 0 },
+    });
+    await prisma.delivery.updateMany({
+      where: { vehicleId: route.vehicleId, status: "delivered" },
+      data: { status: "en_route" },
+    });
+  }
+  return completed.length;
+}

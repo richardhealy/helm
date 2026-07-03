@@ -93,6 +93,10 @@ To see several vehicles working at once (instead of the single-van
 `demo-deliveries`):
 
 ```bash
-npx tsx scripts/demo-fleet.ts   # 3 vans, each an optimized route across London
-npx tsx scripts/simulator.ts    # drives all of them at once
+npx tsx scripts/demo-fleet.ts          # 3 vans, each an optimized route across London
+SIM_LOOP=true npx tsx scripts/simulator.ts   # drives them, and re-dispatches on finish
 ```
+
+`SIM_LOOP=true` re-dispatches each van when it completes its route, so the fleet
+keeps moving indefinitely (handy for a live demo). Without it, vans go idle once
+delivered — as a real fleet would.
