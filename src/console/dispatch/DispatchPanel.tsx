@@ -10,6 +10,7 @@ const LABEL = "text-[10px] uppercase tracking-widest text-[#64748b]";
 export function DispatchPanel() {
   const [board, setBoard] = useState<DispatchBoard | null>(null);
   const [address, setAddress] = useState("");
+  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/dispatch");
@@ -19,6 +20,12 @@ export function DispatchPanel() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!selectedVehicle && board && board.vehicles.length > 0) {
+      setSelectedVehicle(board.vehicles[0].id);
+    }
+  }, [board, selectedVehicle]);
 
   const addDelivery = useCallback(async () => {
     if (!address.trim()) return;
@@ -37,6 +44,26 @@ export function DispatchPanel() {
   const optimize = useCallback(
     async (vehicleId: string) => {
       await fetch(`/api/vehicles/${vehicleId}/optimize`, { method: "POST" });
+      refresh();
+    },
+    [refresh],
+  );
+
+  const assign = useCallback(
+    async (deliveryId: string, vehicleId: string) => {
+      await fetch(`/api/deliveries/${deliveryId}/assign`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ vehicleId }),
+      });
+      refresh();
+    },
+    [refresh],
+  );
+
+  const unassign = useCallback(
+    async (deliveryId: string) => {
+      await fetch(`/api/deliveries/${deliveryId}/unassign`, { method: "POST" });
       refresh();
     },
     [refresh],
@@ -78,7 +105,15 @@ export function DispatchPanel() {
         ) : (
           <div className="flex flex-col gap-1.5">
             {board?.unassigned.map((d) => (
-              <WaybillTicket key={d.id} address={d.address} status="unassigned" />
+              <WaybillTicket
+                key={d.id}
+                address={d.address}
+                status="unassigned"
+                actionLabel={selectedVehicle ? "Assign" : undefined}
+                onAction={
+                  selectedVehicle ? () => assign(d.id, selectedVehicle) : undefined
+                }
+              />
             ))}
           </div>
         )}
@@ -94,7 +129,15 @@ export function DispatchPanel() {
                 style={{ backgroundColor: v.status === "en_route" ? "#f59e0b" : v.status === "offline" ? "#475569" : "#64748b" }}
                 aria-hidden
               />
-              <span className="flex-1 font-mono text-sm">{v.label}</span>
+              <button
+                onClick={() => setSelectedVehicle(v.id)}
+                className={`flex-1 text-left font-mono text-sm ${selectedVehicle === v.id ? "text-[#38bdf8]" : "text-[#e2e8f0]"}`}
+              >
+                {v.label}
+                {selectedVehicle === v.id && (
+                  <span className="ml-2 text-[10px] uppercase tracking-wider text-[#38bdf8]">target</span>
+                )}
+              </button>
               <span className={LABEL}>{v.stops.length} stops</span>
               <button
                 onClick={() => optimize(v.id)}
@@ -114,6 +157,8 @@ export function DispatchPanel() {
                     status={s.status}
                     sequence={s.sequence}
                     eta={formatEta(s.eta)}
+                    actionLabel="Unassign"
+                    onAction={() => unassign(s.id)}
                   />
                 ))
               )}
