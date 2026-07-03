@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { DispatchBoard } from "@/dispatch/board";
-import { fleetStatusLine, formatEta } from "@/dispatch/format";
+import { fleetStatusLine, formatEta, formatEventTime } from "@/dispatch/format";
 import { WaybillTicket } from "./WaybillTicket";
 
 const LABEL = "text-[10px] uppercase tracking-widest text-[#64748b]";
@@ -174,6 +174,25 @@ export function DispatchPanel() {
             </div>
           </div>
         ))}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <p className={LABEL}>Activity</p>
+        {board && board.events.length === 0 ? (
+          <p className="text-xs text-[#475569]">No activity yet.</p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {board?.events.map((e) => (
+              <div key={e.id} className="flex items-baseline gap-2 font-mono text-xs">
+                <span className="text-[#475569]">{formatEventTime(e.createdAt)}</span>
+                <span className="text-[#38bdf8]">{e.type}</span>
+                <span className="min-w-0 flex-1 truncate text-[#94a3b8]">
+                  {e.detail ?? e.actor}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </aside>
   );

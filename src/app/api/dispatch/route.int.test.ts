@@ -13,5 +13,6 @@ describe("GET /api/dispatch", () => {
     const board = await res.json();
     expect(Array.isArray(board.unassigned)).toBe(true);
     expect(Array.isArray(board.vehicles)).toBe(true);
+    expect(Array.isArray(board.events)).toBe(true);
   });
 });

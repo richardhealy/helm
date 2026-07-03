@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getActiveRoute } from "@/routing/routes/routes";
+import { listEvents, type DispatchEventView } from "./events";
 
 export type BoardStop = {
   id: string;
@@ -19,16 +20,18 @@ export type BoardVehicle = {
 export type DispatchBoard = {
   unassigned: { id: string; address: string }[];
   vehicles: BoardVehicle[];
+  events: DispatchEventView[];
 };
 
 export async function getDispatchBoard(): Promise<DispatchBoard> {
-  const [unassignedRows, vehicles] = await Promise.all([
+  const [unassignedRows, vehicles, events] = await Promise.all([
     prisma.delivery.findMany({
       where: { status: "unassigned" },
       orderBy: { createdAt: "asc" },
       select: { id: true, address: true },
     }),
     prisma.vehicle.findMany({ orderBy: { label: "asc" } }),
+    listEvents(20),
   ]);
 
   const boardVehicles: BoardVehicle[] = [];
@@ -60,5 +63,6 @@ export async function getDispatchBoard(): Promise<DispatchBoard> {
   return {
     unassigned: unassignedRows.map((d) => ({ id: d.id, address: d.address })),
     vehicles: boardVehicles,
+    events,
   };
 }
