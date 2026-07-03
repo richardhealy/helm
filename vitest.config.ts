@@ -7,6 +7,10 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: ["src/test/setup.ts"],
+    // Integration tests share one Postgres and some operate on global state
+    // (e.g. dispatchFleet, LISTEN/NOTIFY). Run files sequentially so they don't
+    // stomp each other's rows or notifications.
+    fileParallelism: false,
   },
   resolve: {
     alias: {
