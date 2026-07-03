@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { geocodeAddress, type GeocodeBias } from "@/deliveries/geocode/geocode";
+import { logEvent } from "@/dispatch/events";
 
 export type DeliverySummary = {
   id: string;
@@ -67,15 +68,28 @@ export async function assignDelivery(
   deliveryId: string,
   vehicleId: string,
 ): Promise<void> {
-  await prisma.delivery.update({
+  const delivery = await prisma.delivery.update({
     where: { id: deliveryId },
     data: { vehicleId, status: "assigned", assignedAt: new Date() },
+  });
+  await logEvent({
+    type: "assigned",
+    actor: "dispatcher",
+    deliveryId,
+    vehicleId,
+    detail: delivery.address,
   });
 }
 
 export async function unassignDelivery(deliveryId: string): Promise<void> {
-  await prisma.delivery.update({
+  const delivery = await prisma.delivery.update({
     where: { id: deliveryId },
     data: { vehicleId: null, sequence: null, status: "unassigned" },
+  });
+  await logEvent({
+    type: "unassigned",
+    actor: "dispatcher",
+    deliveryId,
+    detail: delivery.address,
   });
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ingestPing } from "@/fleet/ingest/ingest";
+import { logEvent } from "@/dispatch/events";
 import { simulateStep } from "./engine/step";
 import { cumulativeStops } from "./engine/stops";
 
@@ -63,6 +64,12 @@ export async function tickVehicle(
       "SELECT pg_notify('stop_status', $1)",
       JSON.stringify({ deliveryId, status: "delivered" }),
     );
+    await logEvent({
+      type: "arrived",
+      actor: "simulation",
+      vehicleId,
+      deliveryId,
+    });
   }
 
   await prisma.route.update({
@@ -78,6 +85,12 @@ export async function tickVehicle(
     await prisma.vehicle.update({
       where: { id: vehicleId },
       data: { status: "idle" },
+    });
+    await logEvent({
+      type: "completed",
+      actor: "simulation",
+      vehicleId,
+      routeId: route.id,
     });
   }
 

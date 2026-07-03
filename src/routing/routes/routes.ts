@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { optimizeTrip, type OptimizedTrip, type LngLat } from "@/routing/optimize/optimize";
+import { logEvent } from "@/dispatch/events";
 
 const MAX_STOPS = 11; // Optimization v1: depot + 11 stops = 12 coordinates
 
@@ -45,6 +46,14 @@ export async function persistRoute(
 
   const payload = JSON.stringify({ vehicleId, routeId: route.id });
   await prisma.$executeRawUnsafe("SELECT pg_notify('route_updated', $1)", payload);
+
+  await logEvent({
+    type: "optimized",
+    actor: "dispatcher",
+    vehicleId,
+    routeId: route.id,
+    detail: `${orderedDeliveryIds.length} stops`,
+  });
 
   return { routeId: route.id };
 }
