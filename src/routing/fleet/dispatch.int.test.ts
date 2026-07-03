@@ -35,7 +35,9 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe("dispatchFleet", () => {
+// dispatchFleet calls optimizeRouteForVehicle → Optimization v1, so this needs
+// a Mapbox token; skip when absent (e.g. CI without the secret).
+describe.skipIf(!process.env.MAPBOX_TOKEN)("dispatchFleet", () => {
   it("assigns unassigned deliveries and routes their vehicles", async () => {
     // dispatchFleet is global; assert about our own deliveries so the test is
     // robust to any other fleet data in the shared DB.
