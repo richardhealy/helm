@@ -8,7 +8,7 @@ import {
   toGeoJson,
   type VehiclePosition,
 } from "./markers";
-import { routesToGeoJson, type RouteView } from "./routes";
+import { routesToGeoJson, routeBounds, type RouteView } from "./routes";
 import { stopsToGeoJson, type StopView } from "./stops";
 import type { VehicleSummary } from "@/fleet/registry/vehicles";
 
@@ -65,6 +65,19 @@ export function FleetMap({
     const renderRoutes = () => {
       const src = map.getSource("routes") as mapboxgl.GeoJSONSource | undefined;
       if (src) src.setData(routesToGeoJson([...routeViews.current.values()]));
+    };
+
+    // Fit the viewport to the drawn routes so the depot, every stop, and the
+    // vehicle stay on screen. Left padding clears the dispatch panel.
+    const fitToRoutes = () => {
+      const bounds = routeBounds([...routeViews.current.values()]);
+      if (bounds) {
+        map.fitBounds(bounds, {
+          padding: { left: 420, top: 60, right: 60, bottom: 60 },
+          maxZoom: 15,
+          duration: 800,
+        });
+      }
     };
 
     const renderStops = () => {
@@ -154,6 +167,7 @@ export function FleetMap({
         },
       });
       render();
+      fitToRoutes();
     });
 
     const es = new EventSource("/api/stream");
@@ -172,6 +186,7 @@ export function FleetMap({
       const { geometry } = (await res.json()) as { geometry: GeoJSON.LineString };
       routeViews.current.set(vehicleId, { vehicleId, geometry });
       renderRoutes();
+      fitToRoutes();
     });
     es.addEventListener("stop_status", (e) => {
       const { deliveryId, status } = JSON.parse((e as MessageEvent).data) as {

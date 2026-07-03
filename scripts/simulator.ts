@@ -2,7 +2,10 @@ import "./load-env";
 import { tickAll } from "../src/simulation/driver";
 
 const TICK_MS = 1000;
-const SPEED_MPS = Number(process.env.SIM_SPEED_MPS ?? "12"); // ~43 km/h
+// Compressed demo pace: fast enough to watch a compact city route finish in a
+// minute or two, slow enough to see the vehicle visit each stop. Override with
+// SIM_SPEED_MPS (real city speed is ~10–13 m/s).
+const SPEED_MPS = Number(process.env.SIM_SPEED_MPS ?? "40");
 
 async function loop() {
   try {
