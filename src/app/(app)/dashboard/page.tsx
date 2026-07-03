@@ -2,6 +2,7 @@ import { listVehicles } from "@/fleet/registry/vehicles";
 import { getActiveRoute } from "@/routing/routes/routes";
 import { listRouteStops } from "@/routing/routes/stops";
 import { FleetMap } from "@/console/map/FleetMap";
+import { DispatchPanel } from "@/console/dispatch/DispatchPanel";
 import type { RouteView } from "@/console/map/routes";
 
 export const dynamic = "force-dynamic";
@@ -19,5 +20,10 @@ export default async function DashboardPage() {
     }
   }
   const stops = await listRouteStops();
-  return <FleetMap vehicles={vehicles} routes={routes} stops={stops} />;
+  return (
+    <div className="relative h-screen w-full">
+      <FleetMap vehicles={vehicles} routes={routes} stops={stops} />
+      <DispatchPanel />
+    </div>
+  );
 }
