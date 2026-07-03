@@ -27,6 +27,15 @@ export function DispatchPanel() {
     }
   }, [board, selectedVehicle]);
 
+  // Refresh the board when a route or stop changes (not on every position ping,
+  // which fires ~1/s and would hammer the endpoint).
+  useEffect(() => {
+    const es = new EventSource("/api/stream");
+    es.addEventListener("route_updated", () => refresh());
+    es.addEventListener("stop_status", () => refresh());
+    return () => es.close();
+  }, [refresh]);
+
   const addDelivery = useCallback(async () => {
     if (!address.trim()) return;
     await fetch("/api/deliveries", {
