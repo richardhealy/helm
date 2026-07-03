@@ -1,7 +1,25 @@
-# Project
+# helm
 
-Scaffolded with `blueprint` / `setup-project`. See [`spec.md`](./spec.md) for the
-full design.
+A fleet dispatch console on Mapbox. Dispatchers watch a live map of vehicles,
+batch deliveries onto a van, and the system computes the optimal stop order,
+draws the route with ETAs, and tracks every stop to completion — driven by a
+simulation engine that stands in for real telematics behind a swap-in
+`PositionPing` ingest contract.
+
+## What it does
+
+- **Live map** — Mapbox GL board that fits to the active routes; vehicles move
+  in real time over SSE (Postgres `LISTEN/NOTIFY`).
+- **Delivery intake** — address → coordinates via Mapbox Geocoding.
+- **Optimized routing** — Mapbox Optimization v1: ordered stops, drawn route
+  geometry, per-leg ETAs.
+- **Simulation engine** — a persistent worker glides vehicles along their
+  routes and flips stops to delivered on arrival.
+- **Dispatch console** — add/assign/reassign/optimize, a status-lamp roster,
+  and a live audit-trail activity feed.
+
+See [`spec.md`](./spec.md) for the full design and [`docs/DEPLOY.md`](./docs/DEPLOY.md)
+to deploy.
 
 ## Getting started
 
