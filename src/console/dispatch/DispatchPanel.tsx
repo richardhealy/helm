@@ -10,26 +10,24 @@ const LABEL = "text-[10px] uppercase tracking-widest text-[#64748b]";
 export function DispatchPanel() {
   const [board, setBoard] = useState<DispatchBoard | null>(null);
   const [address, setAddress] = useState("");
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+
+  // The assign target: the explicitly picked vehicle, else the first one.
+  // Derived (not synced via an effect) so there's no cascading setState.
+  const selectedVehicle = picked ?? board?.vehicles[0]?.id ?? null;
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/dispatch");
     if (res.ok) setBoard(await res.json());
   }, []);
 
+  // Initial load + refresh when a route or stop changes (not on every position
+  // ping, which fires ~1/s and would hammer the endpoint). setState happens in
+  // the async callback / event listeners, after await — never synchronously.
   useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  useEffect(() => {
-    if (!selectedVehicle && board && board.vehicles.length > 0) {
-      setSelectedVehicle(board.vehicles[0].id);
-    }
-  }, [board, selectedVehicle]);
-
-  // Refresh the board when a route or stop changes (not on every position ping,
-  // which fires ~1/s and would hammer the endpoint).
-  useEffect(() => {
+    void (async () => {
+      await refresh();
+    })();
     const es = new EventSource("/api/stream");
     es.addEventListener("route_updated", () => refresh());
     es.addEventListener("stop_status", () => refresh());
@@ -154,7 +152,7 @@ export function DispatchPanel() {
                 aria-hidden
               />
               <button
-                onClick={() => setSelectedVehicle(v.id)}
+                onClick={() => setPicked(v.id)}
                 className={`flex-1 text-left font-mono text-sm ${selectedVehicle === v.id ? "text-[#38bdf8]" : "text-[#e2e8f0]"}`}
               >
                 {v.label}
