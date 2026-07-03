@@ -68,3 +68,13 @@ npx tsx scripts/simulator.ts         # glide the vehicle along it
 Watch http://localhost:3000/dashboard: the vehicle moves smoothly along the
 route and stops turn green (`delivered`) on arrival. Speed is configurable via
 `SIM_SPEED_MPS`. In production this runs as a persistent Railway worker.
+
+## Run a full fleet demo
+
+To see several vehicles working at once (instead of the single-van
+`demo-deliveries`):
+
+```bash
+npx tsx scripts/demo-fleet.ts   # 3 vans, each an optimized route across London
+npx tsx scripts/simulator.ts    # drives all of them at once
+```
