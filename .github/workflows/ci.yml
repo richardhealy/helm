@@ -8,10 +8,26 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      # Dummy values so the build/typecheck run without real secrets.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_dev?schema=public
       NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # Live-Mapbox integration suites run only if this secret is set; they skip otherwise.
+      MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+      NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -22,15 +38,19 @@ jobs:
 
       - run: npm ci
 
-      # Generate the Prisma client only if this project uses the db module.
-      - name: Prisma generate
-        run: test -f prisma/schema.prisma && npx prisma generate || echo "no prisma schema — skipping"
+      - name: Prisma generate + migrate
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
 
       - name: Lint
         run: npx eslint
 
       - name: Typecheck
         run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build
