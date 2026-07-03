@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { optimizeTrip } from "./optimize";
 
-describe("optimizeTrip (live Mapbox)", () => {
+describe.skipIf(!process.env.MAPBOX_TOKEN)("optimizeTrip (live Mapbox)", () => {
   it("returns an ordered trip for a depot + 3 stops", async () => {
     const trip = await optimizeTrip([
       { lat: 51.5, lng: -0.12 }, // depot

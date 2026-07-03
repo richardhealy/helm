@@ -21,7 +21,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe("delivery intake + assignment", () => {
+describe.skipIf(!process.env.MAPBOX_TOKEN)("delivery intake + assignment", () => {
   it("creates a geocoded, unassigned delivery and assigns it", async () => {
     const d = await createDelivery({ address: "Piccadilly Circus, London" });
     createdDeliveries.push(d.id);

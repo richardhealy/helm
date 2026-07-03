@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { geocodeAddress } from "./geocode";
 
-describe("geocodeAddress (live Mapbox)", () => {
+describe.skipIf(!process.env.MAPBOX_TOKEN)("geocodeAddress (live Mapbox)", () => {
   it("resolves a real address to plausible London coordinates", async () => {
     const result = await geocodeAddress("Trafalgar Square, London");
     expect(result).not.toBeNull();

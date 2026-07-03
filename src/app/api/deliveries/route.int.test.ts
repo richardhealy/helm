@@ -19,7 +19,7 @@ function post(body: unknown) {
   );
 }
 
-describe("POST /api/deliveries", () => {
+describe.skipIf(!process.env.MAPBOX_TOKEN)("POST /api/deliveries", () => {
   it("rejects a missing address with 400", async () => {
     const res = await post({});
     expect(res.status).toBe(400);
