@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { DispatchBoard } from "@/dispatch/board";
-import { fleetStatusLine } from "@/dispatch/format";
+import { fleetStatusLine, formatEta } from "@/dispatch/format";
 import { WaybillTicket } from "./WaybillTicket";
 
 const LABEL = "text-[10px] uppercase tracking-widest text-[#64748b]";
@@ -33,6 +33,14 @@ export function DispatchPanel() {
     setAddress("");
     refresh();
   }, [address, refresh]);
+
+  const optimize = useCallback(
+    async (vehicleId: string) => {
+      await fetch(`/api/vehicles/${vehicleId}/optimize`, { method: "POST" });
+      refresh();
+    },
+    [refresh],
+  );
 
   return (
     <aside className="absolute inset-y-0 left-0 z-10 flex w-[380px] flex-col gap-4 overflow-y-auto border-r border-[#1e293b] bg-[#0b1220]/85 p-5 text-[#e2e8f0] backdrop-blur-md">
@@ -74,6 +82,44 @@ export function DispatchPanel() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <p className={LABEL}>Fleet</p>
+        {board?.vehicles.map((v) => (
+          <div key={v.id} className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${v.status === "en_route" ? "motion-safe:animate-pulse" : ""}`}
+                style={{ backgroundColor: v.status === "en_route" ? "#f59e0b" : v.status === "offline" ? "#475569" : "#64748b" }}
+                aria-hidden
+              />
+              <span className="flex-1 font-mono text-sm">{v.label}</span>
+              <span className={LABEL}>{v.stops.length} stops</span>
+              <button
+                onClick={() => optimize(v.id)}
+                className="rounded border border-[#1e293b] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#94a3b8] hover:border-[#38bdf8] hover:text-[#38bdf8] focus:outline-none focus-visible:ring-1 focus-visible:ring-[#38bdf8]"
+              >
+                Optimize
+              </button>
+            </div>
+            <div className="flex flex-col gap-1 pl-4">
+              {v.stops.length === 0 ? (
+                <p className="text-xs text-[#475569]">No stops assigned.</p>
+              ) : (
+                v.stops.map((s) => (
+                  <WaybillTicket
+                    key={s.id}
+                    address={s.address}
+                    status={s.status}
+                    sequence={s.sequence}
+                    eta={formatEta(s.eta)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        ))}
       </section>
     </aside>
   );
