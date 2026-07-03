@@ -184,3 +184,16 @@ model RouteLeg {
 
   @@index([routeId, sequence])
 }
+
+model DispatchEvent {
+  id         String   @id @default(cuid())
+  type       String
+  actor      String
+  vehicleId  String?
+  deliveryId String?
+  routeId    String?
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
