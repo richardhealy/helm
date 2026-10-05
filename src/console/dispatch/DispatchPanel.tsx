@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { DispatchBoard } from "@/dispatch/board";
 import { fleetStatusLine, formatEta, formatEventTime } from "@/dispatch/format";
+import { isFinal } from "@/deliveries/orders/lifecycle";
 import { WaybillTicket } from "./WaybillTicket";
 
 const LABEL = "text-[10px] uppercase tracking-widest text-[#64748b]";
@@ -180,7 +181,7 @@ export function DispatchPanel() {
                     sequence={s.sequence}
                     eta={formatEta(s.eta)}
                     actionLabel="Unassign"
-                    onAction={() => unassign(s.id)}
+                    onAction={isFinal(s.status) ? undefined : () => unassign(s.id)}
                   />
                 ))
               )}

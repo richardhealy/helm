@@ -32,14 +32,19 @@ export async function tickVehicle(
     dtSeconds: opts.dtSeconds,
   });
 
-  // On the first movement, mark the vehicle and its stops en_route.
+  // On the first movement, mark the vehicle and the stops on this route
+  // en_route. Stops assigned after the route was optimized stay assigned.
   if (route.progressMeters === 0) {
     await prisma.vehicle.update({
       where: { id: vehicleId },
       data: { status: "en_route" },
     });
     await prisma.delivery.updateMany({
-      where: { vehicleId, status: "assigned" },
+      where: {
+        id: { in: stops.map((s) => s.deliveryId) },
+        vehicleId,
+        status: "assigned",
+      },
       data: { status: "en_route" },
     });
   }
@@ -54,12 +59,18 @@ export async function tickVehicle(
     source: "simulation",
   });
 
-  // Mark arrivals delivered (exactly once — they leave the en_route filter).
+  // Mark arrivals delivered (exactly once: they leave the open-status
+  // filter). The route's geometry is fixed when it is optimized, so the van
+  // can pass a stop the dispatcher has since unassigned or moved to another
+  // van. Only deliver stops that still belong to this vehicle.
+  const delivered: string[] = [];
   for (const deliveryId of result.arrivedDeliveryIds) {
-    await prisma.delivery.update({
-      where: { id: deliveryId },
+    const { count } = await prisma.delivery.updateMany({
+      where: { id: deliveryId, vehicleId, status: { in: ["assigned", "en_route"] } },
       data: { status: "delivered", completedAt: new Date() },
     });
+    if (count === 0) continue;
+    delivered.push(deliveryId);
     await prisma.$executeRawUnsafe(
       "SELECT pg_notify('stop_status', $1)",
       JSON.stringify({ deliveryId, status: "delivered" }),
@@ -96,7 +107,7 @@ export async function tickVehicle(
 
   return {
     moved: true,
-    arrived: result.arrivedDeliveryIds,
+    arrived: delivered,
     completed: result.completed,
   };
 }
