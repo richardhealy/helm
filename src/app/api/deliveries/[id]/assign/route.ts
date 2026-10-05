@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { assignDelivery } from "@/deliveries/orders/deliveries";
+import {
+  assignDelivery,
+  DeliveryNotFoundError,
+  DeliveryStateError,
+} from "@/deliveries/orders/deliveries";
 
 export async function POST(
   request: Request,
@@ -12,6 +16,16 @@ export async function POST(
   if (!vehicleId) {
     return NextResponse.json({ error: "vehicleId is required" }, { status: 400 });
   }
-  await assignDelivery(id, vehicleId);
+  try {
+    await assignDelivery(id, vehicleId);
+  } catch (err) {
+    if (err instanceof DeliveryNotFoundError) {
+      return NextResponse.json({ error: err.message }, { status: 404 });
+    }
+    if (err instanceof DeliveryStateError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    throw err;
+  }
   return NextResponse.json({ ok: true });
 }
