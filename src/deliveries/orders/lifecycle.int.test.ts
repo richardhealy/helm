@@ -5,6 +5,7 @@ import {
   unassignDelivery,
   DeliveryNotFoundError,
   DeliveryStateError,
+  VehicleNotFoundError,
 } from "./deliveries";
 
 let vehicleId: string;
@@ -89,6 +90,41 @@ describe("delivery lifecycle guards", () => {
     );
     await expect(assignDelivery("no-such-delivery", vehicleId)).rejects.toBeInstanceOf(
       DeliveryNotFoundError,
+    );
+  });
+
+  it("reports an unknown vehicle as not found and leaves the stop in the pool", async () => {
+    const d = await makeDelivery("unassigned");
+
+    const err = await assignDelivery(d.id, "no-such-vehicle").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(VehicleNotFoundError);
+    expect((err as Error).message).toBe("Vehicle no-such-vehicle not found");
+
+    const after = await prisma.delivery.findUniqueOrThrow({ where: { id: d.id } });
+    expect(after.status).toBe("unassigned");
+    expect(after.vehicleId).toBeNull();
+    expect(after.assignedAt).toBeNull();
+    const events = await prisma.dispatchEvent.count({ where: { deliveryId: d.id } });
+    expect(events).toBe(0);
+  });
+
+  it("keeps an en-route stop on its van when the new vehicle is unknown", async () => {
+    const d = await makeDelivery("en_route");
+
+    await expect(assignDelivery(d.id, "no-such-vehicle")).rejects.toBeInstanceOf(
+      VehicleNotFoundError,
+    );
+
+    const after = await prisma.delivery.findUniqueOrThrow({ where: { id: d.id } });
+    expect(after.status).toBe("en_route");
+    expect(after.vehicleId).toBe(vehicleId);
+  });
+
+  it("still answers 'already delivered' before checking the vehicle", async () => {
+    const d = await makeDelivery("delivered");
+
+    await expect(assignDelivery(d.id, "no-such-vehicle")).rejects.toBeInstanceOf(
+      DeliveryStateError,
     );
   });
 });

@@ -3,6 +3,7 @@ import {
   assignDelivery,
   DeliveryNotFoundError,
   DeliveryStateError,
+  VehicleNotFoundError,
 } from "@/deliveries/orders/deliveries";
 
 export async function POST(
@@ -19,7 +20,7 @@ export async function POST(
   try {
     await assignDelivery(id, vehicleId);
   } catch (err) {
-    if (err instanceof DeliveryNotFoundError) {
+    if (err instanceof DeliveryNotFoundError || err instanceof VehicleNotFoundError) {
       return NextResponse.json({ error: err.message }, { status: 404 });
     }
     if (err instanceof DeliveryStateError) {

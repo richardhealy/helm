@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { geocodeAddress, type GeocodeBias } from "@/deliveries/geocode/geocode";
 import { logEvent } from "@/dispatch/events";
 import { FINAL_STATUSES } from "./lifecycle";
@@ -79,6 +80,22 @@ export class DeliveryStateError extends Error {
   }
 }
 
+export class VehicleNotFoundError extends Error {
+  constructor(vehicleId: string) {
+    super(`Vehicle ${vehicleId} not found`);
+    this.name = "VehicleNotFoundError";
+  }
+}
+
+/**
+ * True when Postgres refused a write because a foreign key points nowhere
+ * (Prisma error P2003). On a delivery update the only foreign key we set is
+ * `vehicleId`, so here it means no vehicle has that id.
+ */
+function isForeignKeyViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003";
+}
+
 /**
  * Apply a dispatcher change to a stop that is still in play. The status check
  * is part of the UPDATE, so a stop the simulator delivers at the same moment
@@ -108,15 +125,28 @@ async function updateOpenDelivery(
   return prisma.delivery.findUniqueOrThrow({ where: { id: deliveryId } });
 }
 
+/**
+ * Put a stop on a vehicle. Throws DeliveryNotFoundError for an unknown stop,
+ * DeliveryStateError for a finished one and VehicleNotFoundError for an
+ * unknown vehicle. The vehicle is checked by the foreign key on the same
+ * UPDATE rather than a separate lookup, so a refused assignment changes
+ * nothing and logs no event.
+ */
 export async function assignDelivery(
   deliveryId: string,
   vehicleId: string,
 ): Promise<void> {
-  const delivery = await updateOpenDelivery(deliveryId, {
-    vehicleId,
-    status: "assigned",
-    assignedAt: new Date(),
-  });
+  let delivery;
+  try {
+    delivery = await updateOpenDelivery(deliveryId, {
+      vehicleId,
+      status: "assigned",
+      assignedAt: new Date(),
+    });
+  } catch (err) {
+    if (isForeignKeyViolation(err)) throw new VehicleNotFoundError(vehicleId);
+    throw err;
+  }
   await logEvent({
     type: "assigned",
     actor: "dispatcher",
