@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-08
+
+### Fixed
+
+- `POST /api/deliveries/:id/assign` with a `vehicleId` that matches no vehicle
+  now answers 404 with `Vehicle <id> not found`. It used to fail with a 500,
+  because the foreign-key error Postgres raised on the update (Prisma P2003)
+  was not caught. The stop is left exactly as it was and no `assigned` event
+  is logged. A finished stop still answers 409 whatever vehicle is named, and
+  an unknown stop still answers 404 (`src/deliveries/orders/deliveries.ts`).
+
 ## 2026-10-06
 
 ### Fixed

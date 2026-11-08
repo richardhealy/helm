@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-10-06
+Last updated: 2026-11-08
 
 ## Where it stands
 
@@ -17,7 +17,7 @@ file is the current record.
 
 ## Tests
 
-`npm test` runs 69 tests in 36 files. Without `MAPBOX_TOKEN`, 6 live-Mapbox
+`npm test` runs 73 tests in 36 files. Without `MAPBOX_TOKEN`, 6 live-Mapbox
 tests in 5 files are skipped, which is how CI runs unless the secret is set.
 Integration tests need Postgres (see the README) and run one file at a time.
 
@@ -37,10 +37,22 @@ Integration tests need Postgres (see the README) and run one file at a time.
   moving van no longer corrupts its status (fixed 2026-10-06), but the van
   still drives its old line past that stop until the route is re-optimized,
   which runs into the first issue.
-- **Assigning to an unknown vehicle id returns a 500** (Prisma foreign-key
-  error P2003) rather than a 404.
+- **A position ping for an unknown vehicle id returns a 500.**
+  `ingestPing` (`src/fleet/ingest/ingest.ts`) inserts the ping first, so
+  Postgres refuses it with a foreign-key error (Prisma P2003) that escapes
+  `POST /api/ingest`. A telematics feed sending a stale or mistyped id gets a
+  server error rather than a 404 or 422. Seen by calling the route handler
+  directly on 2026-11-08; there is no test for it yet.
+- **Optimizing an unknown vehicle answers 409 "No depot or no assigned
+  deliveries"** (`POST /api/vehicles/:id/optimize`), which hides the real
+  problem. A 404 would be clearer.
 
 ## Recently done
+
+- 2026-11-08: assigning a stop to a vehicle id that does not exist answers 404
+  `Vehicle <id> not found` instead of a 500, and leaves the stop as it was
+  with no audit event. `assignDelivery` turns the foreign-key error on its
+  UPDATE into a `VehicleNotFoundError`. 4 new tests.
 
 - 2026-10-06: the simulator only delivers stops that still belong to the van,
   departure only marks the route's own stops en route, and delivered or failed
@@ -52,6 +64,8 @@ Integration tests need Postgres (see the README) and run one file at a time.
 1. Decide how re-optimizing a moving van should work, then fix the first known
    issue with a test.
 2. Gate the dashboard and the dispatch API routes behind sign-in.
-3. Stretch goals in `spec.md`. Fleet-wide VRP on Optimization v2 was tried
+3. Answer 404 for an unknown vehicle on `POST /api/ingest` and on optimize,
+   as assign now does.
+4. Stretch goals in `spec.md`. Fleet-wide VRP on Optimization v2 was tried
    earlier and the Mapbox account returned forbidden, so
    `assignNearest` in `src/routing/fleet/assign.ts` is the swap point for now.
