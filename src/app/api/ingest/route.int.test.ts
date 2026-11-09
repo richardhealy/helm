@@ -37,4 +37,11 @@ describe("POST /api/ingest", () => {
     const json = await res.json();
     expect(json.id).toBeTruthy();
   });
+
+  it("answers 404 for a vehicle id that matches no vehicle", async () => {
+    const missingId = "no-such-vehicle-route-test";
+    const res = await post({ vehicleId: missingId, lat: 51.5, lng: -0.1, heading: 45, speed: 5 });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: `Vehicle ${missingId} not found` });
+  });
 });

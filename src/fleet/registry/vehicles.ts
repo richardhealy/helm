@@ -1,5 +1,13 @@
 import { prisma } from "@/lib/db";
 
+/** Thrown when a write names a vehicle id that matches no vehicle. */
+export class VehicleNotFoundError extends Error {
+  constructor(vehicleId: string) {
+    super(`Vehicle ${vehicleId} not found`);
+    this.name = "VehicleNotFoundError";
+  }
+}
+
 export type VehicleSummary = {
   id: string;
   label: string;

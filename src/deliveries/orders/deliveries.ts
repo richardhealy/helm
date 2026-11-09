@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
+import { isForeignKeyViolation, prisma } from "@/lib/db";
+import { VehicleNotFoundError } from "@/fleet/registry/vehicles";
 import { geocodeAddress, type GeocodeBias } from "@/deliveries/geocode/geocode";
 import { logEvent } from "@/dispatch/events";
 import { FINAL_STATUSES } from "./lifecycle";
@@ -80,21 +80,8 @@ export class DeliveryStateError extends Error {
   }
 }
 
-export class VehicleNotFoundError extends Error {
-  constructor(vehicleId: string) {
-    super(`Vehicle ${vehicleId} not found`);
-    this.name = "VehicleNotFoundError";
-  }
-}
-
-/**
- * True when Postgres refused a write because a foreign key points nowhere
- * (Prisma error P2003). On a delivery update the only foreign key we set is
- * `vehicleId`, so here it means no vehicle has that id.
- */
-function isForeignKeyViolation(err: unknown): boolean {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003";
-}
+// Re-exported so callers that already import it from here keep working.
+export { VehicleNotFoundError };
 
 /**
  * Apply a dispatcher change to a stop that is still in play. The status check
@@ -144,6 +131,8 @@ export async function assignDelivery(
       assignedAt: new Date(),
     });
   } catch (err) {
+    // vehicleId is the only foreign key this update sets, so a violation
+    // means no vehicle has that id.
     if (isForeignKeyViolation(err)) throw new VehicleNotFoundError(vehicleId);
     throw err;
   }
