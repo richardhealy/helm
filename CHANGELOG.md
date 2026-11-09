@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-09
+
+### Fixed
+
+- `POST /api/ingest` with a `vehicleId` that matches no vehicle now answers
+  404 with `Vehicle <id> not found`. It used to fail with a 500, because
+  Postgres refused the ping insert on its foreign key (Prisma P2003) and
+  nothing caught it, so a telematics feed sending a stale or mistyped id got a
+  server error. The ping is not stored, no vehicle position changes and no
+  `vehicle_position` notification is sent (`src/fleet/ingest/ingest.ts`).
+
+### Changed
+
+- `VehicleNotFoundError` moved to `src/fleet/registry/vehicles.ts` and the
+  foreign-key check to `isForeignKeyViolation` in `src/lib/db.ts`, so ingest
+  and assign share them. `src/deliveries/orders/deliveries.ts` still exports
+  `VehicleNotFoundError`.
+
 ## 2026-11-08
 
 ### Fixed

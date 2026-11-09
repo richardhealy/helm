@@ -5,7 +5,7 @@
  * run that before typechecking or building. A single instance is reused across
  * hot reloads in development.
  */
-import { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
@@ -18,4 +18,13 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
+}
+
+/**
+ * True when Postgres refused a write because a foreign key points at a row
+ * that does not exist (Prisma error P2003). Callers decide what the missing
+ * row means, for example an unknown vehicle id.
+ */
+export function isForeignKeyViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003";
 }
